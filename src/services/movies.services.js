@@ -1,5 +1,14 @@
-const db = require('../database/models')
-const getAllMovies = async (limit, offset) => {
+const { Op } = require('sequelize')
+const db = require('../database/models');
+const { options } = require('../routes/v1/movies.routes');
+const getAllMovies = async (limit, offset, keyword) => {
+    const options = keyword ? {
+        where:{
+            title:{
+                [Op.substring]: keyword
+            }
+        }
+    } : null
     try{
         const movies = await db.Movie.findAll({
             limit,
@@ -20,9 +29,12 @@ const getAllMovies = async (limit, offset) => {
                     }
                     
                 }
-            ]
+            ],
+            ...options
         });
-        const count = await db.Movie.count()
+        const count = await db.Movie.count({
+            ...options
+        })
         return {
             movies,
             count
@@ -170,29 +182,32 @@ const deleteMovie = async (id) => {
                 message: 'ID corrupto'
             }
         }
-        const movie = await db.movie.findByPk(id);
+        const movie = await db.Movie.findByPk(id);
         if(!movie){
             throw{
                 status: 400,
                 message: 'No hay pelicula con ese id'
             }
         }
-        await db.Actor_Movie.destroy({
-            where:{
-                movie_id: id
-            }
-        })
-        await db.Actor.update({
-            favorite_movie_id: null
-        },{
-           where:{
-            favorite_movie_id: id
-           }
-        })
-        await movie.destroy()
-        return null
-    }catch(error){
+        await Promise.all([
+            db.Actor_Movie.destroy({
+                where: {
+                    movie_id: id
+                }
+            }),
+            db.Actor.update({
+                favorite_movie_id: null
+            }, {
+                where: {
+                    favorite_movie_id: id
+                }
+            }),
+            movie.destroy()
+        ]);
 
+        return null;
+    }catch(error){
+    console.log(error)
     }
 }
 module.exports = {

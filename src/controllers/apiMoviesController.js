@@ -3,8 +3,9 @@ const paginate = require('express-paginate')
 const createError = require('http-errors')
 module.exports = {
     index: async (req,res) => {
+        const {keyword} = req.query
         try{
-            const {count, movies} = await getAllMovies(req.query.limit, req.skip);
+            const {count, movies} = await getAllMovies(req.query.limit, req.skip, keyword);
             const pagesCount = Math.ceil(count / req.query.limit);
             const currentPage = req.query.page;
             const pages = paginate.getArrayPages(req)(pagesCount,pagesCount,currentPage)
@@ -49,6 +50,7 @@ module.exports = {
     },
     store: async (req,res) => {
         try{
+            console.log(req.body);
             const {title, rating, release_date, awards, length, genre_id, actors} = req.body
             if([title, rating, release_date, awards].includes(''|| undefined)){
                 throw createError(400,'Todos los campos son obligatorios')
@@ -73,8 +75,8 @@ module.exports = {
             const movieUpdated = await updateMovie(req.params.id, req.body)
             return res.status(200).json({
                 ok: true,
-                message: 'Pelicula agregada con exito :D',
-                url : movieUpdated
+                message: 'Pelicula actualizada con exito :D',
+                data : movieUpdated
             }) 
         }catch(error){
             console.log(error)
@@ -85,22 +87,20 @@ module.exports = {
             })
         }
     },
-    delete: async (req,res) => {
-            try{
-                await deleteMovie(req.params.id);
-                return res.status(200).json({
-                    ok: true,
-                    message: 'Pelicula eliminada con exito :D',
-
-                }) 
-
-            }catch(error){
-                console.log(error)
-                return res.status(error.status || 500).json({
-                    ok: false,
-                    status: error.status || 500,
-                    error: error.message || 'ERROR EN EL SERVICIO'
-                })
-            }
+    delete: async (req, res) => {
+        try {
+            await deleteMovie(req.params.id);
+            return res.status(200).json({
+                ok: true,
+                message: 'Pelicula eliminada con exito :D',
+            });
+        } catch (error) {
+            console.log(error);
+            return res.status(error.status || 500).json({
+                ok: false,
+                status: error.status || 500,
+                error: error.message || 'ERROR EN EL SERVICIO'
+            });
+        }
     }
 };
